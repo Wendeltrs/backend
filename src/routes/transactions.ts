@@ -22,6 +22,12 @@ export async function transactionsRoutes(app: FastifyInstance){ //Criando plugin
         return { transactions }
     })
 
+    app.get('/summary', async () => {
+        const summary = await knex('transactions').sum('amount', { as: 'amount' }).first()
+
+        return { summary }
+    })
+
     app.post('/', async (request, reply) => {
         const createTransactionBodySchema = z.object({
             title: z.string(),
