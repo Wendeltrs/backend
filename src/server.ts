@@ -4,7 +4,9 @@ import { transactionsRoutes } from './routes/transactions'
 
 const app = fastify()
 
-app.register(transactionsRoutes) //Definindo plug-ins
+app.register(transactionsRoutes, { //Importando plugin
+    prefix: 'transactions' //Todas as rotas que começarem com 'transactions', cairão no plugin 'transactionsRoutes'
+})
 
 app.listen({
     port: env.PORT //Porta
