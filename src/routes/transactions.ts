@@ -5,6 +5,10 @@ import { randomUUID } from "crypto"
 import { checkSessionIdExists } from "../middlewares/check-sessionId-exists"
 
 export async function transactionsRoutes(app: FastifyInstance){ //Criando plugin
+    //app.addHook('preHandler', async (request, reply) => { //Hook global no contexto do plugin
+    //    console.log(`${[request.method]} ${request.url}`)
+    //})
+
     app.get('/', { preHandler: [checkSessionIdExists] }, async (request) => {
         const { sessionId } = request.cookies
 
