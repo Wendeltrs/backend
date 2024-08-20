@@ -38,10 +38,22 @@ export async function transactionsRoutes(app: FastifyInstance){ //Criando plugin
         //Valida os dados do req.body (dados vindos da requisição), para ver se estão de acordo com os dados definidos no 'schema'
         const { title, amount, type } = createTransactionBodySchema.parse(request.body)
 
+        let sessionId =  request.cookies.sessionId //Se existir cookie, salva na variável
+
+        if(!sessionId){ //Se não existir cookie, cria um novo
+            sessionId = randomUUID()
+
+            reply.cookie('sessionId', sessionId, { //Salavando o cookie
+                path: '/',
+                maxAge: 60 * 60 * 24 * 7 //O cookie vai durar 7 dias
+            }) 
+        }
+
         await knex('transactions').insert({ //Inserindo dados
             id: randomUUID(),
             title,
-            amount: type == 'credit' ? amount : amount * -1
+            amount: type == 'credit' ? amount : amount * -1,
+            session_id: sessionId
         })
 
         return reply.status(201).send()
