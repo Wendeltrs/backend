@@ -1,6 +1,6 @@
 import { FastifyInstance } from "fastify"
 import { knex } from "../database"
-import { z } from "zod"
+import { string, z } from "zod"
 import { randomUUID } from "crypto"
 
 export async function transactionsRoutes(app: FastifyInstance){ //Criando plugin
@@ -45,5 +45,41 @@ export async function transactionsRoutes(app: FastifyInstance){ //Criando plugin
         })
 
         return reply.status(201).send()
+    })
+
+    app.delete('/:id', async (request, reply) => {
+        const deleteTransactionsParamsSchema = z.object({
+            id: z.string().uuid()
+        })
+
+        const { id } = deleteTransactionsParamsSchema.parse(request.params)
+
+        await knex('transactions').where('id', id).del()
+
+        return reply.status(204).send()
+    })
+
+    app.put('/:id', async (request, reply) => {
+        const updateTransactionsBodySchema = z.object({
+            title: z.string(),
+            amount: z.number(),
+            type: z.enum(['credit', 'debit'])
+        })
+
+        const { title, amount, type } = updateTransactionsBodySchema.parse(request.body)
+
+        const updateTransactionsParamsSchema = z.object({
+            id: z.string().uuid()
+        })
+
+        const { id } = updateTransactionsParamsSchema.parse(request.params)
+
+        await knex('transactions').where('id', id).update({
+            id: randomUUID(),
+            title,
+            amount: type == 'credit' ? amount : amount * -1
+        })
+
+        return reply.status(204).send()
     })
 }
