@@ -1,29 +1,46 @@
 import { FastifyInstance } from "fastify"
 import { knex } from "../database"
-import { string, z } from "zod"
+import { z } from "zod"
 import { randomUUID } from "crypto"
+import { checkSessionIdExists } from "../middlewares/check-sessionId-exists"
 
 export async function transactionsRoutes(app: FastifyInstance){ //Criando plugin
-    app.get('/', async () => {
-        const transactions = await knex('transactions').select('*')
+    app.get('/', { preHandler: [checkSessionIdExists] }, async (request) => {
+        const { sessionId } = request.cookies
+
+        const transactions = await knex('transactions')
+            .where('session_id', sessionId)
+            .select('*')
 
         return { transactions }
     })
 
-    app.get('/:id', async (request) => {
+    app.get('/:id', { preHandler: [checkSessionIdExists] } , async (request) => {
         const getTransactionParamsSchema = z.object({
             id: z.string().uuid()
         })
 
         const { id } = getTransactionParamsSchema.parse(request.params)
 
-        const transactions = await knex('transactions').where('id', id).first()
+        const { sessionId } = request.cookies
+
+        const transactions = await knex('transactions')
+            .where({
+                session_id: sessionId,
+                id //id: id
+            })
+            .first()
 
         return { transactions }
     })
 
-    app.get('/summary', async () => {
-        const summary = await knex('transactions').sum('amount', { as: 'amount' }).first()
+    app.get('/summary', { preHandler: [checkSessionIdExists] } , async (request) => {
+        const { sessionId } = request.cookies
+
+        const summary = await knex('transactions')
+            .where('session_id', sessionId)
+            .sum('amount', { as: 'amount' })
+            .first()
 
         return { summary }
     })
@@ -65,8 +82,15 @@ export async function transactionsRoutes(app: FastifyInstance){ //Criando plugin
         })
 
         const { id } = deleteTransactionsParamsSchema.parse(request.params)
+        
+        const { sessionId } = request.cookies
 
-        await knex('transactions').where('id', id).del()
+        await knex('transactions')
+            .where({
+                session_id: sessionId,
+                id
+            })
+            .del()
 
         return reply.status(204).send()
     })
@@ -86,11 +110,15 @@ export async function transactionsRoutes(app: FastifyInstance){ //Criando plugin
 
         const { id } = updateTransactionsParamsSchema.parse(request.params)
 
-        await knex('transactions').where('id', id).update({
-            id: randomUUID(),
-            title,
-            amount: type == 'credit' ? amount : amount * -1
-        })
+        const { sessionId } = request.cookies
+
+        await knex('transactions').where('id', id)
+            .where('session_id', sessionId)
+            .update({
+                id: randomUUID(),
+                title,
+                amount: type == 'credit' ? amount : amount * -1
+            })
 
         return reply.status(204).send()
     })
