@@ -51,4 +51,71 @@ describe('Transactions Routes', async () => {
             })
         ])
     })
+
+    it('Should be able to get specific transactions', async () => { 
+        const createTransaction = await request(app.server)
+            .post('/transactions')
+            .send({
+                title: 'New Transaction',
+                amount: 5000,
+                type: 'credit'
+            })
+
+        const cookies = createTransaction.get('Set-Cookie')
+
+        if(!cookies) return
+
+        const listTranssaction = await request(app.server)
+            .get('/transactions')
+            .set('Cookie', cookies)
+            .expect(200)
+
+        const transactionId = listTranssaction.body.transactions[0].id
+
+        const getTransaction = await request(app.server)
+            .get(`/transactions/${transactionId}`)
+            .set('Cookie', cookies)
+            .expect(200)
+
+        expect(getTransaction.body.transactions).toEqual(
+            expect.objectContaining({
+                title: 'New Transaction',
+                amount: 5000
+            })
+        )
+    })
+
+    it('Should be able to get the summary', async () => { 
+        const createTransaction = await request(app.server)
+            .post('/transactions')
+            .send({
+                title: 'New Transaction',
+                amount: 5000,
+                type: 'credit'
+            })
+
+        const cookies = createTransaction.get('Set-Cookie')
+        
+        if(!cookies) return
+
+        const createTransaction2 = await request(app.server)
+            .post('/transactions')
+            .set('Cookie', cookies)
+            .send({
+                title: 'New Transaction',
+                amount: 3000,
+                type: 'debit'
+            })
+
+        const summary = await request(app.server)
+            .get('/transactions/summary')
+            .set('Cookie', cookies)
+            .expect(200)
+            
+        expect(summary.body.summary).toEqual(
+            expect.objectContaining({
+                amount: 2000
+            })
+        )
+    })
 })
